@@ -52,6 +52,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.app.Activity
 
 data class Post(
     val id: Int,
@@ -836,7 +838,8 @@ fun MyPageScreen(
 
         Button(
             onClick = {
-                Toast.makeText(context, "로그인 페이지로 이동", Toast.LENGTH_SHORT).show()
+                val intent = Intent(context, LoginActivity::class.java)
+                context.startActivity(intent)
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(

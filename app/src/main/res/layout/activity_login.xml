@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F9FA"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="48dp"
+        android:text="MBTI"
+        android:textColor="#000000"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+    <!-- 입력창들도 약간 둥글게 보이기 위해 background 대신 backgroundTint를 유지합니다 -->
+    <EditText
+        android:id="@+id/et_id"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginBottom="12dp"
+        android:background="@android:drawable/editbox_background"
+        android:backgroundTint="#FFFFFF"
+        android:hint="아이디"
+        android:paddingHorizontal="20dp" />
+
+    <EditText
+        android:id="@+id/et_pw"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginBottom="32dp"
+        android:background="@android:drawable/editbox_background"
+        android:backgroundTint="#FFFFFF"
+        android:hint="비밀번호"
+        android:inputType="textPassword"
+        android:paddingHorizontal="20dp" />
+
+    <!-- 로그인 버튼 -->
+    <Button
+        android:id="@+id/btn_login"
+        android:text="로그인"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/rounded_button"
+        android:layout_width="match_parent"
+        android:backgroundTint="#8E82F3"
+        android:layout_height="wrap_content"/>
+
+    <!-- 회원가입 버튼-->
+    <Button
+        android:id="@+id/btn_register"
+        android:text="회원가입"
+        android:textColor="#495057"
+        android:background="@drawable/rounded_button"
+        android:layout_width="match_parent"
+        android:backgroundTint="#E9ECEF"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"/>
+
+</LinearLayout>
