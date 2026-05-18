@@ -53,7 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Intent
-import android.app.Activity
+import com.kakao.sdk.user.UserApiClient
+import androidx.compose.material3.AlertDialog
 
 data class Post(
     val id: Int,
@@ -78,18 +79,23 @@ sealed class Screen {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // LoginActivity에서 보낸 닉네임을 꺼냅니다. (없으면 "사용자"로 기본값 설정)
+        val nickname = intent.getStringExtra("user_nickname") ?: "사용자"
+
         setContent {
-            MBTIApp()
+            // MBTIApp에 닉네임을 전달합니다.
+            MBTIApp(nickname)
         }
     }
 }
 
 @Composable
-fun MBTIApp() {
+fun MBTIApp(nickname: String) {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Main) }
     var selectedCategory by remember { mutableStateOf("전체") }
 
-    var myNickname by remember { mutableStateOf("(미정)") }
+    var myNickname by remember { mutableStateOf(nickname) }
     val myMbti = "(미정)"
 
     val posts = remember {
@@ -399,7 +405,7 @@ fun DetailScreen(
     onDeleteComment: (Int) -> Unit
 ) {
     val context = LocalContext.current
-    var commentInput by remember { mutableStateOf("") }
+    var commentInput by remember { mutableStateOf("")}
 
     BackHandler {
         onBack()
@@ -710,6 +716,8 @@ fun MyPageScreen(
 
     var isEditing by remember { mutableStateOf(false) }
     var editNickname by remember { mutableStateOf(nickname) }
+    var showFirstDialog by remember { mutableStateOf(false) }
+    var showSecondDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -838,6 +846,12 @@ fun MyPageScreen(
 
         Button(
             onClick = {
+
+                // 로그인 세션 삭제
+                val authManager = AuthManager(context)
+                authManager.logout()
+
+                // 로그인 화면 이동
                 val intent = Intent(context, LoginActivity::class.java)
                 context.startActivity(intent)
             },
@@ -854,6 +868,120 @@ fun MyPageScreen(
                 modifier = Modifier.padding(vertical = 6.dp)
             )
         }
+
+        Button(
+            onClick = {
+                showFirstDialog = true
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFD64B4B),
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Text(
+                text = "회원탈퇴",
+                fontSize = 16.sp,
+                modifier = Modifier.padding(vertical = 6.dp)
+            )
+        }
+
+        if (showFirstDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showFirstDialog = false
+                },
+                title = {
+                    Text("회원탈퇴")
+                },
+                text = {
+                    Text("정말 탈퇴하시겠습니까?")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showFirstDialog = false
+                            showSecondDialog = true
+                        }
+                    ) {
+                        Text("네")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showFirstDialog = false
+                        }
+                    ) {
+                        Text("아니요")
+                    }
+                }
+            )
+        }
+
+        if (showSecondDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showSecondDialog = false
+                },
+                title = {
+                    Text("탈퇴 전 확인")
+                },
+                text = {
+                    Text(
+                        "회원탈퇴 시 로그인 정보가 삭제되며,\n" +
+                                "카카오 계정과 앱의 연결이 해제됩니다.\n\n" +
+                                "정말 탈퇴하시려면 아래 버튼을 눌러주세요."
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showSecondDialog = false
+
+                            val authManager = AuthManager(context)
+
+                            UserApiClient.instance.unlink { error ->
+                                if (error != null) {
+                                    Toast.makeText(
+                                        context,
+                                        "회원탈퇴 실패",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    authManager.logout()
+
+                                    Toast.makeText(
+                                        context,
+                                        "회원탈퇴가 완료되었습니다.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+
+                                    val intent = Intent(context, LoginActivity::class.java)
+                                    context.startActivity(intent)
+                                }
+                            }
+                        }
+                    ) {
+                        Text("탈퇴하겠습니다")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showSecondDialog = false
+                        }
+                    ) {
+                        Text("취소")
+                    }
+                }
+            )
+        }
+
+
+
+
 
         Spacer(modifier = Modifier.weight(1f))
 
