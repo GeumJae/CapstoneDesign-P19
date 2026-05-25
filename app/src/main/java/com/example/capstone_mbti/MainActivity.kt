@@ -55,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Intent
+import androidx.compose.material3.AlertDialog
+import com.kakao.sdk.user.UserApiClient
 import androidx.compose.foundation.clickable
 
 data class Post(
@@ -905,7 +907,8 @@ fun ProfileScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-// 회원탈퇴 카드
+
+                    // 회원탈퇴 카드
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -923,20 +926,75 @@ fun ProfileScreen(
                                 .padding(horizontal = 22.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "회원탈퇴",
-                                fontSize = 23.sp,
-                                color = Color(0xFFFF3B3B)
-                            )
-
+                            Text("회원탈퇴", fontSize = 23.sp, color = Color(0xFFFF3B3B))
                             Spacer(modifier = Modifier.weight(1f))
-
-                            Text(
-                                text = "›",
-                                fontSize = 34.sp,
-                                color = Color(0xFFFF3B3B)
-                            )
+                            Text("›", fontSize = 34.sp, color = Color(0xFFFF3B3B))
                         }
+                    }
+
+                    if (showFirstDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showFirstDialog = false },
+                            title = { Text("회원탈퇴") },
+                            text = { Text("정말 탈퇴하시겠습니까?") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showFirstDialog = false
+                                    showSecondDialog = true
+                                }) {
+                                    Text("네")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = {
+                                    showFirstDialog = false
+                                }) {
+                                    Text("아니요")
+                                }
+                            }
+                        )
+                    }
+
+                    if (showSecondDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showSecondDialog = false },
+                            title = { Text("탈퇴 전 확인") },
+                            text = {
+                                Text(
+                                    "회원탈퇴 시 로그인 정보가 삭제되며,\n" +
+                                            "카카오 계정과 앱의 연결이 해제됩니다.\n\n" +
+                                            "정말 탈퇴하시려면 아래 버튼을 눌러주세요."
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showSecondDialog = false
+
+                                    val authManager = AuthManager(context)
+
+                                    UserApiClient.instance.unlink { error ->
+                                        if (error != null) {
+                                            Toast.makeText(context, "회원탈퇴 실패", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            authManager.logout()
+                                            Toast.makeText(context, "회원탈퇴가 완료되었습니다.", Toast.LENGTH_SHORT).show()
+
+                                            val intent = Intent(context, LoginActivity::class.java)
+                                            context.startActivity(intent)
+                                        }
+                                    }
+                                }) {
+                                    Text("탈퇴하겠습니다")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = {
+                                    showSecondDialog = false
+                                }) {
+                                    Text("취소")
+                                }
+                            }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
