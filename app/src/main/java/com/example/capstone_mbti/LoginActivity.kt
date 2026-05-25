@@ -19,12 +19,11 @@ class LoginActivity : AppCompatActivity() {
 
         authManager = AuthManager(this)
 
-        // 자동 로그인 체크
         if (authManager.getLoginSession() != null) {
-            if (authManager.isSignupCompleted()) {
+            if (authManager.isMbtiCompleted()) {
                 moveToMain()
             } else {
-                moveToSignup()
+                moveToMbtiIntro()
             }
             return
         }
@@ -82,31 +81,30 @@ class LoginActivity : AppCompatActivity() {
                 Log.e(TAG, "사용자 정보 요청 실패", error)
             } else if (user != null) {
                 val kakaoId = user.id.toString()
-                val nickname = user.kakaoAccount?.profile?.nickname ?: "카카오 사용자"
+                val kakaoEmail = user.kakaoAccount?.email ?: "user@kakao.com"
 
-                // 자동 로그인 세션 저장
                 authManager.saveLoginSession("kakao_$kakaoId")
 
-                if (authManager.isSignupCompleted()) {
-                    moveToMain()
+                if (authManager.isMbtiCompleted()) {
+                    moveToMain(kakaoEmail)
                 } else {
-                    moveToSignup(nickname)
+                    moveToMbtiIntro(kakaoEmail)
                 }
             }
         }
     }
 
-    private fun moveToSignup(kakaoName: String = "카카오 사용자") {
-        val intent = Intent(this, SignupActivity::class.java)
-        intent.putExtra("kakao_name", kakaoName)
+    private fun moveToMbtiIntro(kakaoEmail: String = "user@kakao.com") {
+        val intent = Intent(this, MbtiTestIntroActivity::class.java)
+        intent.putExtra("kakao_email", kakaoEmail)
         startActivity(intent)
         finish()
     }
 
-    private fun moveToMain() {
+    private fun moveToMain(kakaoEmail: String = "user@kakao.com") {
         val intent = Intent(this, MainActivity::class.java)
+        intent.putExtra("kakao_email", kakaoEmail)
         startActivity(intent)
         finish()
     }
-
 }

@@ -54,4 +54,9 @@ class AuthManager(context: Context) {
     fun isSignupCompleted(): Boolean {
         return pref.getBoolean("signup_completed", false)
     }
+
+    fun isMbtiCompleted(): Boolean {
+        // 나중에 DB에서 MBTI 등록 여부 조회로 교체
+        return false
+    }
 }
