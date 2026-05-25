@@ -12,6 +12,56 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Capstonembti">
 
+        <!-- 카카오 로그인 Redirect -->
+        <activity
+            android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="oauth"
+                    android:scheme="kakao6e93933fdf3680259e490626a38a02bd" />
+            </intent-filter>
+
+        </activity>
+
+        <!-- MBTI 화면들 -->
+        <activity
+            android:name=".MbtiResultActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
+            android:name=".MbtiSelectActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
+            android:name=".SignupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
+            android:name=".MbtiTestIntroActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
+            android:name=".MbtiQuestionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+
+        <!-- 메인화면 -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true" />
+
         <!-- 첫 화면: 로그인 -->
         <activity
             android:name=".LoginActivity"
@@ -23,9 +73,6 @@
             </intent-filter>
         </activity>
 
-
-
-        <activity android:name=".MainActivity" android:exported="true" />
 
     </application>
 </manifest>

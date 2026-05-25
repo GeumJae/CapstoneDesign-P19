@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:paddingLeft="24dp"
+    android:paddingRight="24dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="24dp"
+    tools:context=".MbtiQuestionActivity">
+
+    <!-- 상단 네비게이션 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_back"
+            android:padding="8dp"
+            android:scaleType="centerInside" />
+
+        <TextView
+            android:id="@+id/tvQuestionCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="1 / 8"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#4B5563"
+            android:gravity="center_vertical" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
+
+    </LinearLayout>
+
+    <!-- 진행바 배경 -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:layout_marginTop="12dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:background="@drawable/bg_progress_back" />
+
+        <View
+            android:id="@+id/viewProgress"
+            android:layout_width="0dp"
+            android:layout_height="8dp"
+            android:background="@drawable/bg_progress_fill" />
+
+    </FrameLayout>
+
+    <!-- 구분선 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="22dp"
+        android:background="#E5E7EB" />
+
+    <!-- 질문/선택지 영역 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/tvQuestion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="처음 보는 사람들과의 모임에서 나는?"
+            android:textSize="23sp"
+            android:textStyle="bold"
+            android:textColor="#111111"
+            android:gravity="center" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnAnswerA"
+            android:layout_width="match_parent"
+            android:layout_height="84dp"
+            android:layout_marginTop="42dp"
+            android:text="먼저 말을 걸고 적극적으로 대화한다"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#111827"
+            android:textAllCaps="false"
+            android:gravity="center_vertical"
+            android:paddingLeft="28dp"
+            android:paddingRight="28dp"
+            android:background="@drawable/bg_answer_button"
+            android:backgroundTint="@null" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnAnswerB"
+            android:layout_width="match_parent"
+            android:layout_height="84dp"
+            android:layout_marginTop="14dp"
+            android:text="상대방이 말을 걸 때까지 기다린다"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#111827"
+            android:textAllCaps="false"
+            android:gravity="center_vertical"
+            android:paddingLeft="28dp"
+            android:paddingRight="28dp"
+            android:background="@drawable/bg_answer_button"
+            android:backgroundTint="@null" />
+
+    </LinearLayout>
+
+</LinearLayout>

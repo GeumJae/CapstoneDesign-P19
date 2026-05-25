@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:paddingLeft="24dp"
+    android:paddingRight="24dp"
+    android:background="@drawable/bg_result_gradient"
+    tools:context=".MbtiResultActivity">
+
+    <ImageView
+        android:id="@+id/imgMbtiEmoji"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:src="@drawable/emoji_intj"
+        android:scaleType="centerInside" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:text="당신의 MBTI는"
+        android:textSize="18sp"
+        android:textColor="#4B5563"
+        android:fontFamily="@font/pretendard_variable" />
+
+    <TextView
+        android:id="@+id/tvMbti"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="INTJ"
+        android:textSize="52sp"
+        android:textStyle="bold"
+        android:textColor="#111111"
+        android:fontFamily="@font/pretendard_variable" />
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="전략가"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:textColor="#1F2937"
+        android:fontFamily="@font/pretendard_variable" />
+
+    <TextView
+        android:id="@+id/tvDesc"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="44dp"
+        android:text="상상력이 풍부하고 전략적인 사고를 하는 계획가"
+        android:textSize="16sp"
+        android:textColor="#374151"
+        android:gravity="center"
+        android:fontFamily="@font/pretendard_variable" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnStartCommunity"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="72dp"
+        android:text="커뮤니티 시작하기"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:textAllCaps="false"
+        android:fontFamily="@font/pretendard_variable"
+        android:background="@drawable/bg_purple_button"
+        android:backgroundTint="@null"
+        app:backgroundTint="@null" />
+
+</LinearLayout>

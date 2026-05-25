@@ -1343,6 +1343,7 @@ fun WriteScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPageScreen(
     nickname: String,

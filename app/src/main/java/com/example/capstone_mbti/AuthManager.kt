@@ -43,4 +43,15 @@ class AuthManager(context: Context) {
     fun getNickname(): String {
         return pref.getString("user_nickname", "사용자") ?: "사용자"
     }
+
+    // 회원가입 완료 여부
+    fun saveSignupCompleted(isCompleted: Boolean) {
+        pref.edit()
+            .putBoolean("signup_completed", isCompleted)
+            .apply()
+    }
+
+    fun isSignupCompleted(): Boolean {
+        return pref.getBoolean("signup_completed", false)
+    }
 }
