@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FAFAFA"
+    android:paddingLeft="24dp"
+    android:paddingRight="24dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="24dp"
+    tools:context=".MainActivity">
+
+    <!--상단 제목-->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" >
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_back"
+            android:padding="8dp"
+            android:scaleType="centerInside" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="회원가입"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/pretendard_variable"
+            android:textColor="#111111" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
+
+    </LinearLayout>
+
+    <!---카카오 계정 박스-->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_kakaobox"
+        android:paddingHorizontal="16dp" >
+
+
+        <ImageView
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:src="@drawable/emoji_chat"
+            android:scaleType="centerInside"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="카카오 계정으로 연동됨"
+                android:fontFamily="@font/pretendard_variable"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#222222" />
+
+            <TextView
+                android:id="@+id/tvEmail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="13sp"
+                android:textColor="#444444" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!--구분선-->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="20dp"
+        android:background="#E5E7EB" />
+
+    <!--중앙 컨텐츠-->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginTop="20dp"
+        android:gravity="center_horizontal" >
+
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MBTI를 선택해주세요"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#111111" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="총 16가지 유형 중 선택"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:textColor="#4B5563" />
+
+        <GridLayout
+            android:id="@+id/mbtiGrid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="36dp"
+            android:columnCount="4"
+            android:rowCount="4" >
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnINTJ"
+                style="@style/MbtiButton"
+                android:text="INTJ" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnINTP"
+                style="@style/MbtiButton"
+                android:text="INTP" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnENTJ"
+                style="@style/MbtiButton"
+                android:text="ENTJ" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnENTP"
+                style="@style/MbtiButton"
+                android:text="ENTP" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnINFJ"
+                style="@style/MbtiButton"
+                android:text="INFJ" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnINFP"
+                style="@style/MbtiButton"
+                android:text="INFP" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnENFJ"
+                style="@style/MbtiButton"
+                android:text="ENFJ" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnENFP"
+                style="@style/MbtiButton"
+                android:text="ENFP" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnISTJ"
+                style="@style/MbtiButton"
+                android:text="ISTJ" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnISTP"
+                style="@style/MbtiButton"
+                android:text="ISTP" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnESTJ"
+                style="@style/MbtiButton"
+                android:text="ESTJ" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnESTP"
+                style="@style/MbtiButton"
+                android:text="ESTP" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnISFJ"
+                style="@style/MbtiButton"
+                android:text="ISFJ" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnISFP"
+                style="@style/MbtiButton"
+                android:text="ISFP" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnESFJ"
+                style="@style/MbtiButton"
+                android:text="ESFJ" />
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnESFP"
+                style="@style/MbtiButton"
+                android:text="ESFP" />
+
+        </GridLayout>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnComplete"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="48dp"
+            android:text="완료"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="false"
+            android:fontFamily="@font/pretendard_variable"
+            android:background="@drawable/bg_purple_button"
+            android:backgroundTint="@null"
+            app:backgroundTint="@null"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</LinearLayout>
