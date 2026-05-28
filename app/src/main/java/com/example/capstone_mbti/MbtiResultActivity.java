@@ -18,6 +18,10 @@ public class MbtiResultActivity extends AppCompatActivity {
     private TextView tvDesc;
     private AppCompatButton btnStartCommunity;
 
+    private String kakaoEmail;
+    private String resultMbti;
+    private AuthManager authManager;
+
     private final HashMap<String, MbtiInfo> mbtiMap = new HashMap<>();
 
     static class MbtiInfo {
@@ -43,19 +47,25 @@ public class MbtiResultActivity extends AppCompatActivity {
         tvDesc = findViewById(R.id.tvDesc);
         btnStartCommunity = findViewById(R.id.btnStartCommunity);
 
+        authManager = new AuthManager(this);
+
         initMbtiData();
 
-        String mbti = getIntent().getStringExtra("mbti");
+        resultMbti = getIntent().getStringExtra("mbti");
+        kakaoEmail = getIntent().getStringExtra("kakao_email");
 
-        if (mbti == null || mbti.isEmpty()) {
-            mbti = "INTJ";
+        if (resultMbti == null || resultMbti.isEmpty()) {
+            resultMbti = "INTJ";
+        }
+        if (kakaoEmail == null || kakaoEmail.isEmpty()) {
+            kakaoEmail = "user@kakao.com";
         }
 
-        MbtiInfo info = mbtiMap.get(mbti);
+        MbtiInfo info = mbtiMap.get(resultMbti);
 
         if (info != null) {
             imgMbtiEmoji.setImageResource(info.imageRes);
-            tvMbti.setText(mbti);
+            tvMbti.setText(resultMbti);
             tvName.setText(info.name);
             tvDesc.setText(info.description);
         }
@@ -63,12 +73,24 @@ public class MbtiResultActivity extends AppCompatActivity {
         startResultAnimation();
 
         btnStartCommunity.setOnClickListener(v -> {
-            AuthManager authManager = new AuthManager(MbtiResultActivity.this);
-            authManager.saveSignupCompleted(true);
+            String sessionId = authManager.getLoginSession();
+            String kakaoId = (sessionId != null) ? sessionId.replace("kakao_", "") : "";
 
-            Intent intent = new Intent(MbtiResultActivity.this, MainActivity.class);
-            startActivity(intent);
-            finish();
+            if (!kakaoId.isEmpty()) {
+                SupabaseHelper.updateUserMbti(kakaoId, resultMbti, () -> {
+                    authManager.saveSignupCompleted(true);
+
+                    Intent intent = new Intent(MbtiResultActivity.this, MainActivity.class);
+                    intent.putExtra("kakao_email", kakaoEmail); // 메인 화면으로 이메일도 넘겨줌
+                    startActivity(intent);
+                    finish();
+                });
+            } else {
+                authManager.saveSignupCompleted(true);
+                Intent intent = new Intent(MbtiResultActivity.this, MainActivity.class);
+                startActivity(intent);
+                finish();
+            }
         });
     }
 

@@ -19,15 +19,10 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="oauth"
-                    android:scheme="kakao6e93933fdf3680259e490626a38a02bd" />
+                <data android:scheme="kakao${kakaoApiKey}" android:host="oauth"/>
             </intent-filter>
-
         </activity>
 
         <!-- MBTI 화면들 -->

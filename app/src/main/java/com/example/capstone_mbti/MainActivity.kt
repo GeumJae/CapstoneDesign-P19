@@ -41,8 +41,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,14 +53,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Intent
+import android.util.Log
 import androidx.compose.material3.AlertDialog
 import com.kakao.sdk.user.UserApiClient
-import androidx.compose.foundation.clickable
+import androidx.compose.runtime.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.foundation.layout.*
+import io.github.jan.supabase.postgrest.postgrest
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 data class Post(
     val id: Int,
     val mbti: String,
     val author: String,
+    val authorId: String,
     val category: String,
     val title: String,
     val preview: String,
@@ -70,12 +77,9 @@ data class Post(
     val likes: Int,
     val comments: Int,
     val badgeColor: Color,
-    val badgeTextColor: Color
-)
-
-data class Comment(
-    val nickname: String,
-    val content: String
+    val badgeTextColor: Color,
+    val isLikedByMe: Boolean,
+    val hasPoll: Boolean
 )
 
 data class CategoryItem(
@@ -88,7 +92,6 @@ data class CategoryItem(
 data class MbtiGroup(
     val mbti: String,
     val name: String,
-    val members: String,
     val color: Color
 )
 
@@ -111,150 +114,69 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MBTIApp() {
+    val context = LocalContext.current
+    val authManager = remember { AuthManager(context) }
+    val myKakaoId = remember { authManager.getLoginSession()?.replace("kakao_", "") ?: "" }
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
     var selectedFilter by remember { mutableStateOf("전체") }
+    var myUser by remember { mutableStateOf<User?>(null) }
+    var myPostCount by remember { mutableStateOf(0) }
+    var myCommentCount by remember { mutableStateOf(0) }
+    var myLikeCount by remember { mutableStateOf(0) }
 
-    var myNickname by remember { mutableStateOf("ESTJ") }
-    val myMbti = "ESTJ"
-    val myTypeName = "경영자"
+    LaunchedEffect(myKakaoId, currentScreen) {
+        if (myKakaoId.isNotEmpty()) {
+            try {
+                val users = SupabaseClient.client.postgrest["User"].select {
+                    eq("kakao_id", myKakaoId)
+                }.decodeList<User>()
+                if (users.isNotEmpty()) {
+                    myUser = users[0]
+                }
 
-    val posts = remember {
-        mutableStateListOf(
-            Post(
-                1,
-                "ENFP",
-                "ENFP_행복",
-                "고민상담",
-                "ENFP들만의 고민 있나요?",
-                "저는 계획 세우는 게 너무 힘들어요ㅠㅠ",
-                "저는 계획 세우는 게 너무 힘들어요ㅠㅠ 다들 이런 고민 있으신가요?",
-                24,
-                12,
-                Color(0xFFE8FAD3),
-                Color(0xFF58A51D)
-            ),
-            Post(
-                2,
-                "INTJ",
-                "INTJ_전략",
-                "질문",
-                "INTJ vs INTP 뭐가 다를까요?",
-                "둘 다 비슷해 보이는데 차이점이 궁금해요",
-                "둘 다 비슷해 보이는데 차이점이 궁금해요. 실제로 어떤 점이 다른가요?",
-                45,
-                28,
-                Color(0xFFF0DAFF),
-                Color(0xFF9B12F0)
-            ),
-            Post(
-                3,
-                "ISFJ",
-                "ISFJ_수호자",
-                "일상",
-                "오늘 좋은 일 있었어요!",
-                "친구가 저한테 고마워한다고 했어요 😊",
-                "오늘 친구가 저한테 고마워한다고 했어요 😊 괜히 기분 좋아졌네요.",
-                67,
-                15,
-                Color(0xFFE2EEFF),
-                Color(0xFF3B73E6)
-            ),
-            Post(
-                4,
-                "ESTP",
-                "ESTP_모험",
-                "투표",
-                "주말에 뭐하고 놀까요?",
-                "집에만 있기 너무 답답해요! 추천해주세요",
-                "집에만 있기 너무 답답해요! 주말에 할 만한 거 추천해주세요.",
-                32,
-                19,
-                Color(0xFFFFF3AF),
-                Color(0xFFC48A00)
-            ),
-            Post(
-                5,
-                "INFP",
-                "INFP_중재",
-                "정보",
-                "MBTI별 공부 스타일 정리",
-                "유형별로 집중 잘 되는 방식이 조금 다른 것 같아요",
-                "유형별로 집중 잘 되는 방식이 조금 다른 것 같아요. 저는 조용한 곳이 제일 좋았습니다.",
-                18,
-                7,
-                Color(0xFFE0F7FA),
-                Color(0xFF0096B7)
-            ),
-            Post(
-                6,
-                "ENTP",
-                "ENTP_토론",
-                "유머",
-                "MBTI별 단톡방 특징ㅋㅋ",
-                "E들은 계속 말하고 I들은 읽씹하는 느낌",
-                "E들은 계속 말하고 I들은 읽씹하는 느낌이라 웃겼어요ㅋㅋ",
-                51,
-                22,
-                Color(0xFFFFE4F2),
-                Color(0xFFE13A8B)
-            ),
-            Post(
-                7,
-                "ESFJ",
-                "ESFJ_친화",
-                "연애",
-                "연애할 때 F랑 T 차이 큰가요?",
-                "공감 방식이 달라서 가끔 오해가 생기는 것 같아요",
-                "공감 방식이 달라서 가끔 오해가 생기는 것 같아요. 다들 어떻게 생각하세요?",
-                39,
-                18,
-                Color(0xFFFFE4E4),
-                Color(0xFFD90014)
-            ),
-            Post(
-                8,
-                "ISTJ",
-                "ISTJ_현실",
-                "직장",
-                "팀플할 때 제일 힘든 유형",
-                "계획 안 지키는 사람이 제일 힘든 듯",
-                "팀플할 때 계획 안 지키는 사람이 제일 힘든 듯합니다.",
-                29,
-                11,
-                Color(0xFFE3E9FF),
-                Color(0xFF4F46E5)
-            ),
-            Post(
-                9,
-                "ISFP",
-                "ISFP_감성",
-                "취미",
-                "혼자 하기 좋은 취미 추천",
-                "요즘 집에서 할 만한 취미 찾고 있어요",
-                "요즘 집에서 할 만한 취미 찾고 있어요. 그림이나 악기 같은 것도 괜찮을까요?",
-                21,
-                9,
-                Color(0xFFD7FAFB),
-                Color(0xFF0F9BA8)
-            )
-        )
+                if (currentScreen == Screen.Profile) {
+                    val myBoards = SupabaseClient.client.postgrest["Board"].select {
+                        eq("author_id", myKakaoId)
+                    }.decodeList<Board>()
+                    myPostCount = myBoards.size
+
+                    val myComments = SupabaseClient.client.postgrest["Comment"].select {
+                        eq("author_id", myKakaoId)
+                    }.decodeList<CommentData>()
+                    myCommentCount = myComments.size
+
+                    val myLikes = SupabaseClient.client.postgrest["BoardLike"].select {
+                        eq("user_id", myKakaoId)
+                    }.decodeList<BoardLike>()
+                    myLikeCount = myLikes.size
+                }
+
+            } catch (e: Exception) {
+                Log.e("MBTIApp", "프로필 통계 갱신 실패: ${e.message}")
+            }
+        }
     }
-
-    val commentsMap = remember {
-        mutableStateMapOf<Int, MutableList<Comment>>(
-            1 to mutableStateListOf(Comment("INTJ_전략", "저도 계획 세우는 거 힘들어요")),
-            2 to mutableStateListOf(Comment("ENFP_행복", "INTJ는 계획형 느낌이 더 강한 듯")),
-            3 to mutableStateListOf(Comment("ESTP_모험", "축하해요ㅋㅋ")),
-            4 to mutableStateListOf(Comment("ISFJ_수호자", "카페 가는 것도 좋아요"))
-        )
+    val myNickname = myUser?.nickname ?: "로딩중..."
+    val myMbti = myUser?.mbti ?: "미정"
+    val myTypeName = when(myMbti) {
+        "ISTJ" -> "현실주의자"
+        "ISFJ" -> "수호자"
+        "INFJ" -> "옹호자"
+        "INTJ" -> "전략가"
+        "ISTP" -> "장인"
+        "ISFP" -> "모험가"
+        "INFP" -> "중재자"
+        "INTP" -> "논리술사"
+        "ESTP" -> "활동가"
+        "ESFP" -> "연예인"
+        "ENFP" -> "활동가"
+        "ENTP" -> "변론가"
+        "ESTJ" -> "경영자"
+        "ESFJ" -> "집정관"
+        "ENFJ" -> "선도자"
+        "ENTJ" -> "통솔자"
+        else -> "커뮤니티 멤버"
     }
-
-    val shownPosts = when (selectedFilter) {
-        "전체" -> posts
-        "인기" -> posts.sortedByDescending { it.likes }
-        else -> posts.filter { it.category == selectedFilter }
-    }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFF7F8FA)
@@ -263,7 +185,6 @@ fun MBTIApp() {
             is Screen.Home -> HomeScreen(
                 selectedFilter = selectedFilter,
                 onFilterSelected = { selectedFilter = it },
-                posts = shownPosts,
                 onPostClick = { currentScreen = Screen.Detail(it) },
                 onWriteClick = { currentScreen = Screen.Write },
                 onHomeClick = {
@@ -291,54 +212,150 @@ fun MBTIApp() {
                 nickname = myNickname,
                 mbti = myMbti,
                 typeName = myTypeName,
-                onSaveNickname = { myNickname = it },
+                postCount = myPostCount.toString(),
+                commentCount = myCommentCount.toString(),
+                likeCount = myLikeCount.toString(),
+                onSaveNickname = { newName ->
+                    SupabaseHelper.updateNickname(myKakaoId, newName) { success ->
+                        if (success) {
+                            myUser = myUser?.copy(nickname = newName)
+                            Toast.makeText(context, "닉네임이 성공적으로 변경되었습니다.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "닉네임 변경에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
+                onSaveMbti = { newMbti ->
+                    SupabaseHelper.updateUserMbti(myKakaoId, newMbti, Runnable {
+                        val newTypeName = when(newMbti) {
+                            "ISTJ" -> "전략가"
+                            "ISFJ" -> "수호자"
+                            "INFJ" -> "옹호자"
+                            "INTJ" -> "전략가"
+                            "ISTP" -> "장인"
+                            "ISFP" -> "예술가"
+                            "INFP" -> "중재자"
+                            "INTP" -> "분석가"
+                            "ESTP" -> "활동가"
+                            "ESFP" -> "연예인"
+                            "ENFP" -> "활동가"
+                            "ENTP" -> "변론가"
+                            "ESTJ" -> "경영자"
+                            "ESFJ" -> "외교관"
+                            "ENFJ" -> "선도자"
+                            "ENTJ" -> "지도자"
+                            else -> ""
+                        }
+                        myUser = myUser?.copy(mbti = newMbti)
+                        Toast.makeText(context, "MBTI가 성공적으로 변경되었습니다.", Toast.LENGTH_SHORT).show()
+                    })
+                },
+                onDeleteAccount = {
+                    SupabaseHelper.deleteUser(myKakaoId) { success ->
+                        if (success) {
+                            UserApiClient.instance.unlink { _ ->
+                                authManager.logout()
+                                Toast.makeText(context, "회원탈퇴가 완료되었습니다.", Toast.LENGTH_SHORT).show()
+                                context.startActivity(Intent(context, LoginActivity::class.java))
+                            }
+                        } else {
+                            Toast.makeText(context, "탈퇴 처리 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
                 onHomeClick = {
                     selectedFilter = "전체"
                     currentScreen = Screen.Home
                 },
                 onCategoryClick = { currentScreen = Screen.Category },
-                onProfileClick = { currentScreen = Screen.Profile }
-            )
-
-            is Screen.Detail -> DetailScreen(
-                post = screen.post,
-                comments = commentsMap.getOrPut(screen.post.id) { mutableStateListOf() },
-                myNickname = myNickname,
-                onBack = { currentScreen = Screen.Home },
-                onDeleteClick = {
-                    posts.removeAll { it.id == screen.post.id }
-                    commentsMap.remove(screen.post.id)
+                onProfileClick = { currentScreen = Screen.Profile },
+                onActivityMenuClick = { filterName ->
+                    selectedFilter = filterName
                     currentScreen = Screen.Home
-                },
-                onAddComment = { newComment ->
-                    commentsMap.getOrPut(screen.post.id) { mutableStateListOf() }.add(newComment)
-                },
-                onDeleteComment = { index ->
-                    val list = commentsMap.getOrPut(screen.post.id) { mutableStateListOf() }
-                    if (index in list.indices) list.removeAt(index)
                 }
             )
 
+            is Screen.Detail -> {
+                var dbComments by remember { mutableStateOf<List<CommentData>>(emptyList()) }
+                var pollOptions by remember { mutableStateOf<List<Option>>(emptyList()) }
+                var isLiked by remember { mutableStateOf(screen.post.isLikedByMe) }
+                var likeCount by remember { mutableStateOf(screen.post.likes) }
+
+                LaunchedEffect(screen.post.id) {
+                    SupabaseHelper.fetchComments(screen.post.id.toLong()) { fetched ->
+                        dbComments = fetched
+                    }
+                    if (screen.post.hasPoll) {
+                        SupabaseHelper.fetchOptionsWithVotes(screen.post.id.toLong()) { fetched ->
+                            pollOptions = fetched
+                        }
+                    }
+                }
+
+                DetailScreen(
+                    post = screen.post,
+                    comments = dbComments,
+                    pollOptions = pollOptions,
+                    myKakaoId = myKakaoId,
+                    isLiked = isLiked,
+                    likeCount = likeCount,
+                    onBack = { currentScreen = Screen.Home },
+                    onDeleteClick = {
+                        SupabaseHelper.deleteBoard(screen.post.id.toLong()) {
+                            Toast.makeText(context, "게시글이 삭제되었습니다", Toast.LENGTH_SHORT).show()
+                            selectedFilter = selectedFilter
+                            currentScreen = Screen.Home
+                        }
+                    },
+                    onLikeClick = {
+                        val currentlyLiked = isLiked
+                        isLiked = !currentlyLiked
+                        likeCount = if (!currentlyLiked) likeCount + 1 else likeCount - 1
+                        SupabaseHelper.toggleLike(screen.post.id.toLong(), myKakaoId, currentlyLiked) {}
+                    },
+                    onVoteClick = { clickedOptionId ->
+                        val myPreviousVote = pollOptions
+                            .flatMap { it.VoteUser ?: emptyList() }
+                            .find { it.user_id == myKakaoId }
+
+                        SupabaseHelper.castVote(myKakaoId, clickedOptionId, myPreviousVote) {
+                            Toast.makeText(context, "투표가 반영되었습니다.", Toast.LENGTH_SHORT).show()
+                            SupabaseHelper.fetchOptionsWithVotes(screen.post.id.toLong()) { fetched ->
+                                pollOptions = fetched
+                            }
+                        }
+                    },
+                    onAddComment = { content ->
+                        SupabaseHelper.createComment(boardId = screen.post.id.toLong(), authorId = myKakaoId, content = content) {
+                            SupabaseHelper.fetchComments(screen.post.id.toLong()) { fetched -> dbComments = fetched }
+                        }
+                    },
+                    onDeleteComment = { index ->
+                        val commentId = dbComments[index].id ?: return@DetailScreen
+                        SupabaseHelper.deleteComment(commentId) {
+                            Toast.makeText(context, "댓글이 삭제되었습니다", Toast.LENGTH_SHORT).show()
+                            SupabaseHelper.fetchComments(screen.post.id.toLong()) { fetched -> dbComments = fetched }
+                        }
+                    }
+                )
+            }
+
             is Screen.Write -> WriteScreen(
                 onBack = { currentScreen = Screen.Home },
-                onSave = { mbti, author, category, title, content ->
-                    val newPost = Post(
-                        id = (posts.maxOfOrNull { it.id } ?: 0) + 1,
-                        mbti = mbti,
-                        author = author,
-                        category = category,
-                        title = title,
-                        preview = content,
-                        content = content,
-                        likes = 0,
-                        comments = 0,
-                        badgeColor = Color(0xFFF0DAFF),
-                        badgeTextColor = Color(0xFF9B12F0)
-                    )
-                    posts.add(0, newPost)
-                    commentsMap[newPost.id] = mutableStateListOf()
-                    selectedFilter = "전체"
-                    currentScreen = Screen.Home
+                onSave = { categoryName, title, content, voteOptions ->
+                    SupabaseHelper.fetchCategories { cats ->
+                        val targetCatId = cats.find { it.name == categoryName }?.id
+                        SupabaseHelper.createBoardWithOptions(
+                            title = title,
+                            content = content,
+                            authorId = myKakaoId,
+                            categoryId = targetCatId,
+                            options = voteOptions
+                        ) {
+                            selectedFilter = "전체"
+                            currentScreen = Screen.Home
+                        }
+                    }
                 }
             )
         }
@@ -349,13 +366,41 @@ fun MBTIApp() {
 fun HomeScreen(
     selectedFilter: String,
     onFilterSelected: (String) -> Unit,
-    posts: List<Post>,
     onPostClick: (Post) -> Unit,
     onWriteClick: () -> Unit,
     onHomeClick: () -> Unit,
     onCategoryClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val myKakaoId = remember { AuthManager(context).getLoginSession()?.replace("kakao_", "") ?: "" }
+
+    var dbPosts by remember { mutableStateOf<List<Board>>(emptyList()) }
+    var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
+
+    LaunchedEffect(selectedFilter) {
+        SupabaseHelper.fetchCategories { fetchedCats ->
+            categories = fetchedCats
+            val targetCat = fetchedCats.find { it.name == selectedFilter }
+
+            SupabaseHelper.fetchBoards(targetCat?.id) { fetchedBoards ->
+                dbPosts = when (selectedFilter) {
+                    "전체", "인기" -> fetchedBoards.filter { (it.BoardLike?.size ?: 0) >= 10 }
+                    "내가 쓴 글" -> fetchedBoards.filter { it.author_id == myKakaoId }
+                    "내가 쓴 댓글" -> fetchedBoards.filter { board ->
+                        board.Comment?.any { comment -> comment.author_id == myKakaoId } == true
+                    }
+                    "좋아요 한 글" -> fetchedBoards.filter { board ->
+                        board.BoardLike?.any { like -> like.user_id == myKakaoId } == true
+                    }
+                    else -> {
+                        if (targetCat != null) fetchedBoards
+                        else fetchedBoards.filter { it.User?.mbti == selectedFilter }
+                    }
+                }
+            }
+        }
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -399,32 +444,35 @@ fun HomeScreen(
             Divider(color = Color(0xFFE5E7EB), thickness = 1.dp)
 
             LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                modifier = Modifier.weight(1f)
             ) {
-                if (posts.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(240.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "게시글이 없습니다.",
-                                fontSize = 18.sp,
-                                color = Color(0xFF6B7280)
-                            )
-                        }
-                    }
-                } else {
-                    itemsIndexed(posts) { _, post ->
-                        HomePostItem(post = post, onClick = { onPostClick(post) })
-                    }
-                }
+                items(dbPosts) { board ->
+                    val myKakaoId = AuthManager(LocalContext.current).getLoginSession()?.replace("kakao_", "") ?: ""
+                    val isLiked = board.BoardLike?.any { it.user_id == myKakaoId } == true
+                    val actualCategory = categories.find { it.id == board.category_id }?.name ?: "기타"
 
-                item {
-                    Spacer(modifier = Modifier.height(20.dp))
+                    val convertedPost = Post(
+                        id = board.id?.toInt() ?: 0,
+                        mbti = board.User?.mbti ?: "미정",
+                        author = board.User?.nickname ?: "알 수 없음",
+                        authorId = board.author_id,
+                        category = actualCategory,
+                        title = board.title,
+                        preview = board.content,
+                        content = board.content,
+                        likes = board.BoardLike?.size ?: 0,
+                        comments = board.Comment?.size ?: 0,
+                        isLikedByMe = isLiked,
+                        hasPoll = board.Option?.isNotEmpty() == true,
+                        badgeColor = Color(0xFFE8FAD3),
+                        badgeTextColor = Color(0xFF58A51D)
+                    )
+
+                    HomePostItem(
+                        post = convertedPost,
+                        myKakaoId = myKakaoId,
+                        onClick = { onPostClick(convertedPost) }
+                    )
                 }
             }
 
@@ -479,6 +527,7 @@ fun FilterChip(
 @Composable
 fun HomePostItem(
     post: Post,
+    myKakaoId: String,
     onClick: () -> Unit
 ) {
     Column(
@@ -513,7 +562,7 @@ fun HomePostItem(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            if (post.category == "투표") {
+            if (post.hasPoll) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(7.dp))
@@ -551,7 +600,11 @@ fun HomePostItem(
         Spacer(modifier = Modifier.height(18.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("♡ ${post.likes}", fontSize = 17.sp, color = Color(0xFF6B7280))
+            Text(
+                text = if (post.isLikedByMe) "♥ ${post.likes}" else "♡ ${post.likes}",
+                fontSize = 17.sp,
+                color = if (post.isLikedByMe) Color(0xFFFF3B3B) else Color(0xFF6B7280)
+            )
             Spacer(modifier = Modifier.width(22.dp))
             Text("💬 ${post.comments}", fontSize = 17.sp, color = Color(0xFF6B7280))
             Spacer(modifier = Modifier.weight(1f))
@@ -581,10 +634,22 @@ fun CategoryScreen(
     )
 
     val groups = listOf(
-        MbtiGroup("INTJ", "전략가", "234명 참여 중", Color(0xFF9B12F0)),
-        MbtiGroup("ENFP", "활동가", "456명 참여 중", Color(0xFF4CAB00)),
-        MbtiGroup("INFP", "중재자", "389명 참여 중", Color(0xFF0096B7)),
-        MbtiGroup("ESTJ", "경영자", "312명 참여 중", Color(0xFFD90014))
+        MbtiGroup("INTJ", "전략가", Color(0xFF9B12F0)),
+        MbtiGroup("ENFP", "활동가",  Color(0xFF4CAB00)),
+        MbtiGroup("INFP", "중재자",  Color(0xFF0096B7)),
+        MbtiGroup("ESTJ", "경영자",  Color(0xFFD90014)),
+        MbtiGroup("ISTJ", "현실주의자",  Color(0xFF2C3E50)),
+        MbtiGroup("ISFJ", "수호자", Color(0xFF34495E)),
+        MbtiGroup("INFJ", "옹호자",  Color(0xFF8E44AD)),
+        MbtiGroup("INTP", "논리술사", Color(0xFF7F8C8D)),
+        MbtiGroup("ISTP", "장인", Color(0xFF95A5A6)),
+        MbtiGroup("ISFP", "모험가", Color(0xFF27AE60)),
+        MbtiGroup("INFP", "중재자", Color(0xFF2ECC71)),
+        MbtiGroup("ENTJ", "통솔자",  Color(0xFFC0392B)),
+        MbtiGroup("ENTP", "변론가",  Color(0xFFE67E22)),
+        MbtiGroup("ENFJ", "선도자", Color(0xFFF1C40F)),
+        MbtiGroup("ESFP", "연예인", Color(0xFFE74C3C)),
+        MbtiGroup("ESFJ", "집정관", Color(0xFFD35400))
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -649,8 +714,11 @@ fun CategoryScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    groups.forEach {
-                        MbtiGroupCard(group = it)
+                    groups.forEach { group ->
+                        MbtiGroupCard(
+                            group = group,
+                            onClick = { onCategorySelected(group.mbti) }
+                        )
                         Spacer(modifier = Modifier.height(14.dp))
                     }
                 }
@@ -708,9 +776,14 @@ fun CategoryCard(
 }
 
 @Composable
-fun MbtiGroupCard(group: MbtiGroup) {
+fun MbtiGroupCard(
+    group: MbtiGroup,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -745,12 +818,6 @@ fun MbtiGroupCard(group: MbtiGroup) {
                     fontSize = 22.sp,
                     color = Color(0xFF111827)
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = group.members,
-                    fontSize = 17.sp,
-                    color = Color(0xFF374151)
-                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -766,16 +833,41 @@ fun ProfileScreen(
     nickname: String,
     mbti: String,
     typeName: String,
+    postCount: String,
+    commentCount: String,
+    likeCount: String,
     onSaveNickname: (String) -> Unit,
+    onSaveMbti: (String) -> Unit,
     onHomeClick: () -> Unit,
     onCategoryClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    onDeleteAccount: () -> Unit,
+    onActivityMenuClick: (String) -> Unit
 ) {
     val context = LocalContext.current
     var isEditing by remember { mutableStateOf(false) }
     var editNickname by remember { mutableStateOf(nickname) }
     var showFirstDialog by remember { mutableStateOf(false) }
     var showSecondDialog by remember { mutableStateOf(false) }
+    var showNotification by remember { mutableStateOf(false) }
+    var showPolicy by remember { mutableStateOf(false) }
+    var showMbtiDialog by remember { mutableStateOf(false) }
+    if (showPolicy) {
+        PolicyDialog(onDismiss = { showPolicy = false })
+    }
+    if (showNotification) {
+        NotificationDialog(onDismiss = { showNotification = false })
+    }
+    if (showMbtiDialog) {
+        MbtiChangeDialog(
+            currentMbti = mbti,
+            onDismiss = { showMbtiDialog = false },
+            onSelect = { newMbti ->
+                onSaveMbti(newMbti)
+                showMbtiDialog = false
+            }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -793,45 +885,73 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "프로필",
+                            "프로필",
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Normal,
                             color = Color(0xFF111827)
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "⚙",
-                            fontSize = 34.sp,
-                            color = Color(0xFF4B5563)
                         )
                     }
 
                     Spacer(modifier = Modifier.height(36.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
+                        val mbtiImageRes = when(mbti.uppercase()) {
+                            "INTJ" -> R.drawable.emoji_intj
+                            "INTP" -> R.drawable.emoji_intp
+                            "ENTJ" -> R.drawable.emoji_entj
+                            "ENTP" -> R.drawable.emoji_entp
+                            "INFJ" -> R.drawable.emoji_infj
+                            "INFP" -> R.drawable.emoji_infp
+                            "ENFJ" -> R.drawable.emoji_enfj
+                            "ENFP" -> R.drawable.emoji_enfp
+                            "ISTJ" -> R.drawable.emoji_istj
+                            "ISFJ" -> R.drawable.emoji_isfj
+                            "ESTJ" -> R.drawable.emoji_estj
+                            "ESFJ" -> R.drawable.emoji_esfj
+                            "ISTP" -> R.drawable.emoji_istp
+                            "ISFP" -> R.drawable.emoji_isfp
+                            "ESTP" -> R.drawable.emoji_estp
+                            "ESFP" -> R.drawable.emoji_esfp
+                            else -> R.drawable.emoji_estj
+                        }
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = mbtiImageRes),
+                            contentDescription = "MBTI 캐릭터 이미지",
                             modifier = Modifier
                                 .size(120.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(Color(0xFFD90014)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("📊", fontSize = 46.sp)
-                        }
+                                .background(Color(0xFFF3F4F6)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
 
                         Spacer(modifier = Modifier.width(28.dp))
 
                         Column {
-                            Text(
-                                text = mbti,
-                                fontSize = 30.sp,
-                                color = Color(0xFF111827)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = mbti,
+                                    fontSize = 30.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF111827)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color(0xFFE5E7EB), shape = RoundedCornerShape(6.dp))
+                                        .clickable { showMbtiDialog = true }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(text = "변경", fontSize = 12.sp, color = Color(0xFF4B5563))
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
                             Text(
                                 text = typeName,
-                                fontSize = 22.sp,
-                                color = Color(0xFF4B5563)
+                                fontSize = 15.sp,
+                                color = Color(0xFF6B7280),
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -839,9 +959,9 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(38.dp))
 
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        ProfileStat("24", "게시글", Modifier.weight(1f))
-                        ProfileStat("156", "댓글", Modifier.weight(1f))
-                        ProfileStat("432", "좋아요", Modifier.weight(1f))
+                        ProfileStat(postCount, "게시글", Modifier.weight(1f))
+                        ProfileStat(commentCount, "댓글", Modifier.weight(1f))
+                        ProfileStat(likeCount, "좋아요", Modifier.weight(1f))
                     }
                 }
 
@@ -854,20 +974,23 @@ fun ProfileScreen(
                 ) {
                     Text("활동", fontSize = 18.sp, color = Color(0xFF374151))
                     Spacer(modifier = Modifier.height(14.dp))
-                    ProfileMenuItem("내가 쓴 글")
-                    ProfileMenuItem("내가 쓴 댓글")
-                    ProfileMenuItem("좋아요 한 글")
 
+                    ProfileMenuItem("내가 쓴 글", onClick = { onActivityMenuClick("내가 쓴 글") })
+                    ProfileMenuItem("내가 쓴 댓글", onClick = { onActivityMenuClick("내가 쓴 댓글") })
+                    ProfileMenuItem("좋아요 한 글", onClick = { onActivityMenuClick("좋아요 한 글") })
                     Spacer(modifier = Modifier.height(28.dp))
 
                     Text("설정", fontSize = 18.sp, color = Color(0xFF374151))
                     Spacer(modifier = Modifier.height(14.dp))
-                    ProfileMenuItem("알림 설정")
-                    ProfileMenuItem("개인정보 처리방침")
+                    ProfileMenuItem("알림 설정", onClick = {
+                        showNotification = true
+                    })
+                    ProfileMenuItem("개인정보 처리방침", onClick = {
+                        showPolicy = true
+                    })
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-// 로그아웃 카드
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -904,11 +1027,7 @@ fun ProfileScreen(
                             )
                         }
                     }
-
                     Spacer(modifier = Modifier.height(12.dp))
-
-
-                    // 회원탈퇴 카드
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -968,21 +1087,7 @@ fun ProfileScreen(
                             },
                             confirmButton = {
                                 TextButton(onClick = {
-                                    showSecondDialog = false
-
-                                    val authManager = AuthManager(context)
-
-                                    UserApiClient.instance.unlink { error ->
-                                        if (error != null) {
-                                            Toast.makeText(context, "회원탈퇴 실패", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            authManager.logout()
-                                            Toast.makeText(context, "회원탈퇴가 완료되었습니다.", Toast.LENGTH_SHORT).show()
-
-                                            val intent = Intent(context, LoginActivity::class.java)
-                                            context.startActivity(intent)
-                                        }
-                                    }
+                                    onDeleteAccount()
                                 }) {
                                     Text("탈퇴하겠습니다")
                                 }
@@ -1072,11 +1177,13 @@ fun ProfileStat(
 }
 
 @Composable
-fun ProfileMenuItem(title: String) {
+fun ProfileMenuItem(title: String,
+                    onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp),
+            .padding(bottom = 12.dp)
+            .clickable {onClick()},
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -1103,11 +1210,16 @@ fun ProfileMenuItem(title: String) {
 @Composable
 fun DetailScreen(
     post: Post,
-    comments: List<Comment>,
-    myNickname: String,
+    comments: List<CommentData>,
+    pollOptions: List<Option>,
+    myKakaoId: String,
+    isLiked: Boolean,
+    likeCount: Int,
     onBack: () -> Unit,
     onDeleteClick: () -> Unit,
-    onAddComment: (Comment) -> Unit,
+    onLikeClick: () -> Unit,
+    onVoteClick: (Long) -> Unit,
+    onAddComment: (String) -> Unit,
     onDeleteComment: (Int) -> Unit
 ) {
     val context = LocalContext.current
@@ -1115,183 +1227,273 @@ fun DetailScreen(
 
     BackHandler { onBack() }
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.White)
             .imePadding()
-            .padding(22.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = onBack,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.width(36.dp)
             ) {
-                TextButton(onClick = onBack) {
-                    Text("뒤로가기", color = Color(0xFF9B12F0))
-                }
-
-                TextButton(
-                    onClick = {
-                        Toast.makeText(context, "게시글이 삭제되었습니다", Toast.LENGTH_SHORT).show()
-                        onDeleteClick()
-                    }
-                ) {
-                    Text("삭제", color = Color(0xFFFF3B3B))
-                }
+                Text("←", fontSize = 24.sp, color = Color.Black)
             }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Column(modifier = Modifier.padding(22.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(post.badgeColor)
-                                .padding(horizontal = 12.dp, vertical = 5.dp)
-                        ) {
-                            Text(
-                                text = post.mbti,
-                                fontSize = 14.sp,
-                                color = post.badgeTextColor,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Text(
-                            text = post.author,
-                            fontSize = 18.sp,
-                            color = Color(0xFF374151)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Text(
-                        text = post.title,
-                        fontSize = 27.sp,
-                        color = Color(0xFF111827)
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Text(
-                        text = post.content,
-                        fontSize = 18.sp,
-                        lineHeight = 27.sp,
-                        color = Color(0xFF374151)
-                    )
-                }
-            }
-        }
-
-        item {
             Text(
-                text = "댓글",
-                fontSize = 21.sp,
+                text = "게시글",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF111827)
             )
-        }
+            Spacer(modifier = Modifier.weight(1f))
 
-        if (comments.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            if (post.authorId == myKakaoId) {
+                TextButton(
+                    onClick = onDeleteClick,
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.wrapContentWidth()
                 ) {
-                    Text(
-                        text = "아직 댓글이 없습니다.",
-                        modifier = Modifier.padding(18.dp),
-                        fontSize = 16.sp,
-                        color = Color(0xFF6B7280)
-                    )
+                    Text("삭제", color = Color(0xFFFF3B3B), fontSize = 15.sp)
                 }
             }
-        } else {
-            itemsIndexed(comments) { index, comment ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Column(modifier = Modifier.padding(18.dp)) {
+        }
+
+        Divider(color = Color(0xFFF3F4F6), thickness = 1.dp)
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        ) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFF3E8FF))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = post.mbti,
+                                fontSize = 12.sp,
+                                color = Color(0xFF9B12F0),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Text(text = post.title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(text = post.content, fontSize = 17.sp, lineHeight = 26.sp, color = Color(0xFF374151))
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    if (post.hasPoll && pollOptions.isNotEmpty()) {
+                        val totalVotes = pollOptions.sumOf { it.VoteUser?.size ?: 0 }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F5FF)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(20.dp)) {
+                                Text("투표", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                pollOptions.forEach { option ->
+                                    val voteCount = option.VoteUser?.size ?: 0
+                                    val percentage = if (totalVotes > 0) (voteCount.toFloat() / totalVotes * 100).toInt() else 0
+                                    val isMyVote = option.VoteUser?.any { it.user_id == myKakaoId } == true
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color.White)
+                                            .clickable { onVoteClick(option.id!!) }
+                                    ) {
+                                        if (percentage > 0) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxHeight()
+                                                    .fillMaxWidth(fraction = percentage / 100f)
+                                                    .background(if (isMyVote) Color(0xFFC4B5FD) else Color(0xFFDBEAFE))
+                                            )
+                                        }
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 16.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = option.content,
+                                                fontSize = 15.sp,
+                                                color = if (isMyVote) Color(0xFF4C1D95) else Color(0xFF374151),
+                                                fontWeight = if (isMyVote) FontWeight.Medium else FontWeight.Normal
+                                            )
+                                            Text(text = "${percentage}%", fontSize = 14.sp, color = Color(0xFF6B7280))
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "총 ${totalVotes}명 참여",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF6B7280)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.clickable { onLikeClick() },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isLiked) "👍" else "👍🏻",
+                                fontSize = 18.sp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "$likeCount", fontSize = 16.sp, color = Color(0xFF4B5563))
+                        }
+                        Spacer(modifier = Modifier.width(20.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = "💬", fontSize = 18.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "${comments.size}", fontSize = 16.sp, color = Color(0xFF4B5563))
+                        }
+                    }
+                }
+            }
+
+            item { Divider(color = Color(0xFFF9FAFB), thickness = 8.dp) }
+
+            item {
+                Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
+                    Text(text = "댓글 ${comments.size}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+            }
+
+            if (comments.isEmpty()) {
+                item {
+                    Text(
+                        text = "아직 댓글이 없습니다. 첫 댓글을 남겨보세요!",
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 40.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        fontSize = 15.sp,
+                        color = Color(0xFF9CA3AF)
+                    )
+                }
+            } else {
+                itemsIndexed(comments) { index, comment ->
+                    val commenterNickname = comment.User?.nickname ?: "알 수 없음"
+                    val commenterMbti = comment.User?.mbti ?: ""
+
+                    Column(modifier = Modifier.padding(horizontal = 22.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = comment.nickname,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF111827)
-                            )
-
-                            TextButton(
-                                onClick = {
-                                    onDeleteComment(index)
-                                    Toast.makeText(context, "댓글이 삭제되었습니다", Toast.LENGTH_SHORT).show()
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFFF3E8FF))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(text = commenterMbti, fontSize = 11.sp, color = Color(0xFF9B12F0), fontWeight = FontWeight.Bold)
                                 }
-                            ) {
-                                Text("삭제", color = Color(0xFFFF3B3B), fontSize = 13.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = commenterNickname, fontSize = 14.sp, color = Color(0xFF4B5563), fontWeight = FontWeight.Medium)
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(text = comment.content, color = Color(0xFF374151), fontSize = 15.sp, lineHeight = 22.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                        Text(
-                            text = comment.content,
-                            color = Color(0xFF374151),
-                            fontSize = 16.sp,
-                            lineHeight = 22.sp
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (comment.author_id == myKakaoId) {
+                                TextButton(
+                                    onClick = { onDeleteComment(index) },
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Text("삭제", color = Color(0xFF9CA3AF), fontSize = 13.sp)
+                                }
+                            }
+                        }
                     }
+                    Divider(color = Color(0xFFF3F4F6), thickness = 1.dp, modifier = Modifier.padding(vertical = 16.dp))
                 }
             }
         }
 
-        item {
-            OutlinedTextField(
-                value = commentInput,
-                onValueChange = { commentInput = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("댓글을 입력하세요") },
-                shape = RoundedCornerShape(14.dp)
-            )
-        }
-
-        item {
-            Button(
-                onClick = {
-                    if (commentInput.isBlank()) {
-                        Toast.makeText(context, "댓글 내용을 입력하세요", Toast.LENGTH_SHORT).show()
-                    } else {
-                        onAddComment(Comment(myNickname, commentInput))
-                        commentInput = ""
-                        Toast.makeText(context, "댓글이 등록되었습니다", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF9B12F0),
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(14.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+        ) {
+            Divider(color = Color(0xFFE5E7EB), thickness = 1.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("댓글 등록", fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
+                OutlinedTextField(
+                    value = commentInput,
+                    onValueChange = { commentInput = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("댓글을 입력하세요...", color = Color(0xFF9CA3AF), fontSize = 15.sp) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        unfocusedBorderColor = Color(0xFFE5E7EB),
+                        focusedBorderColor = Color(0xFF9B12F0),
+                        containerColor = Color(0xFFF9FAFB)
+                    )
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Button(
+                    onClick = {
+                        if (commentInput.isNotBlank()) {
+                            onAddComment(commentInput)
+                            commentInput = ""
+                            Toast.makeText(context, "댓글이 등록되었습니다", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9B12F0)),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Text("등록", fontSize = 15.sp)
+                }
             }
         }
     }
@@ -1301,17 +1503,18 @@ fun DetailScreen(
 @Composable
 fun WriteScreen(
     onBack: () -> Unit,
-    onSave: (String, String, String, String, String) -> Unit
+    onSave: (String, String, String, List<String>) -> Unit
 ) {
     val context = LocalContext.current
-
     BackHandler { onBack() }
 
-    var mbti by remember { mutableStateOf("INTJ") }
-    var author by remember { mutableStateOf("INTJ_전략") }
-    var category by remember { mutableStateOf("질문") }
+    val categories = listOf("일상", "고민상담", "질문", "정보", "유머", "연애", "직장", "취미")
+    var category by remember { mutableStateOf(categories[0]) }
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
+
+    var isVoteEnabled by remember { mutableStateOf(false) }
+    var voteOptions by remember { mutableStateOf(listOf("", "")) }
 
     Column(
         modifier = Modifier
@@ -1319,256 +1522,132 @@ fun WriteScreen(
             .imePadding()
             .padding(22.dp)
     ) {
-        TextButton(onClick = onBack) {
-            Text("뒤로가기", color = Color(0xFF9B12F0))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
+                Text("←", fontSize = 28.sp, color = Color.Black)
+            }
+            Text("글쓰기", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+            TextButton(onClick = {
+                if (title.isBlank() || content.isBlank()) {
+                    Toast.makeText(context, "제목과 내용을 입력하세요", Toast.LENGTH_SHORT).show()
+                    return@TextButton
+                }
+                if (isVoteEnabled && voteOptions.any { it.isBlank() }) {
+                    Toast.makeText(context, "투표 선택지를 모두 입력하세요", Toast.LENGTH_SHORT).show()
+                    return@TextButton
+                }
+                Toast.makeText(context, "글이 등록되었습니다", Toast.LENGTH_SHORT).show()
+                val finalOptions = if (isVoteEnabled) voteOptions else emptyList()
+                onSave(category, title, content, finalOptions)
+            }) {
+                Text("완료", fontSize = 18.sp, color = Color(0xFF9B12F0))
+            }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("카테고리", fontSize = 16.sp, color = Color(0xFF6B7280))
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = "글쓰기",
-            fontSize = 30.sp,
-            color = Color(0xFF111827)
-        )
-
-        Spacer(modifier = Modifier.height(22.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilterChip("INTJ", mbti == "INTJ") {
-                mbti = "INTJ"
-                author = "INTJ_전략"
-            }
-            FilterChip("ENFP", mbti == "ENFP") {
-                mbti = "ENFP"
-                author = "ENFP_행복"
-            }
-            FilterChip("ESTP", mbti == "ESTP") {
-                mbti = "ESTP"
-                author = "ESTP_모험"
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(categories) { cat ->
+                FilterChip(cat, category == cat) { category = cat }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilterChip("질문", category == "질문") { category = "질문" }
-            FilterChip("일상", category == "일상") { category = "일상" }
-            FilterChip("투표", category == "투표") { category = "투표" }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("제목") },
-            shape = RoundedCornerShape(14.dp)
+            placeholder = { Text("제목을 입력하세요", color = Color(0xFF9CA3AF)) },
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                unfocusedBorderColor = Color.Transparent,
+                focusedBorderColor = Color.Transparent,
+                containerColor = Color.Transparent
+            ),
+            textStyle = LocalTextStyle.current.copy(fontSize = 22.sp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Divider(color = Color(0xFFF3F4F6), thickness = 1.dp)
 
         OutlinedTextField(
             value = content,
             onValueChange = { content = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(230.dp),
-            label = { Text("내용") },
-            shape = RoundedCornerShape(14.dp)
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                if (title.isBlank() || content.isBlank()) {
-                    Toast.makeText(context, "제목과 내용을 입력하세요", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "글이 등록되었습니다", Toast.LENGTH_SHORT).show()
-                    onSave(mbti, author, category, title, content)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF9B12F0),
-                contentColor = Color.White
+                .weight(1f),
+            placeholder = { Text("내용을 입력하세요", color = Color(0xFF9CA3AF)) },
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                unfocusedBorderColor = Color.Transparent,
+                focusedBorderColor = Color.Transparent,
+                containerColor = Color.Transparent
             ),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text("등록", fontSize = 17.sp, modifier = Modifier.padding(vertical = 7.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MyPageScreen(
-    nickname: String,
-    mbti: String,
-    onBack: () -> Unit,
-    onSaveNickname: (String) -> Unit
-) {
-    val context = LocalContext.current
-
-    BackHandler {
-        onBack()
-    }
-
-    var isEditing by remember { mutableStateOf(false) }
-    var editNickname by remember { mutableStateOf(nickname) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)
-            .imePadding()
-            .padding(20.dp)
-    ) {
-        Text(
-            text = "마이페이지",
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF1F1F1F)
+            textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Divider(color = Color(0xFFE5E7EB), thickness = 1.dp)
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Card(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text(
-                    text = "사용자 정보",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF222222)
-                )
+            Text("투표 추가", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color(0xFF111827))
+            Switch(
+                checked = isVoteEnabled,
+                onCheckedChange = { isVoteEnabled = it },
+                colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF9B12F0))
+            )
+        }
 
-                Spacer(modifier = Modifier.height(14.dp))
+        if (isVoteEnabled) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-                if (isEditing) {
+            LazyColumn(
+                modifier = Modifier.fillMaxHeight(0.4f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                itemsIndexed(voteOptions) { index, option ->
                     OutlinedTextField(
-                        value = editNickname,
-                        onValueChange = { editNickname = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("닉네임") },
-                        shape = RoundedCornerShape(14.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "MBTI: $mbti",
-                        fontSize = 15.sp,
-                        color = Color(0xFF555555)
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = {
-                            val newNickname = if (editNickname.isBlank()) "(미정)" else editNickname
-                            onSaveNickname(newNickname)
-                            editNickname = newNickname
-                            isEditing = false
-                            Toast.makeText(context, "닉네임이 수정되었습니다", Toast.LENGTH_SHORT).show()
+                        value = option,
+                        onValueChange = { newValue ->
+                            val updatedOptions = voteOptions.toMutableList()
+                            updatedOptions[index] = newValue
+                            voteOptions = updatedOptions
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF8D7BE7),
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text("저장")
-                    }
-                } else {
-                    Text(
-                        text = "닉네임: $nickname",
-                        fontSize = 15.sp,
-                        color = Color(0xFF555555)
+                        placeholder = { Text("선택지 ${index + 1}", color = Color(0xFF9CA3AF)) },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            containerColor = Color(0xFFF3F4F6),
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color(0xFF9B12F0)
+                        )
                     )
+                }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "MBTI: $mbti",
-                        fontSize = 15.sp,
-                        color = Color(0xFF555555)
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = {
-                            editNickname = nickname
-                            isEditing = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF8D7BE7),
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(14.dp)
+                item {
+                    OutlinedButton(
+                        onClick = { voteOptions = voteOptions + "" },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD1D5DB)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF6B7280))
                     ) {
-                        Text("정보 수정")
+                        Text("+ 선택지 추가", fontSize = 16.sp, modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                Toast.makeText(context, "MBTI 검사 페이지로 이동", Toast.LENGTH_SHORT).show()
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4F6EF7),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text(
-                text = "MBTI 검사하기",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(vertical = 6.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                Toast.makeText(context, "로그인 페이지로 이동", Toast.LENGTH_SHORT).show()
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFD64B4B),
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text(
-                text = "로그아웃",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(vertical = 6.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        BottomNavBar(
-            selected = "프로필",
-            onHomeClick = onBack,
-            onCategoryClick = { },
-            onProfileClick = { }
-        )
     }
 }
 
@@ -1647,4 +1726,172 @@ fun BottomNavItem(
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
         )
     }
+}
+
+@Composable
+fun PolicyDialog(onDismiss: () -> Unit) {
+    val scrollState = rememberScrollState()
+
+    val privacyPolicyText = """
+        <프로젝트명 또는 앱 이름>은 정보주체의 개인정보를 안전하게 처리하기 위해 최선을 다하고 있습니다. 본 방침은 대학 프로젝트 개발 및 테스트 목적에 맞춰 필요 최소한의 데이터 처리 기준을 안내합니다.
+        
+        1. 처리하는 개인정보 항목 및 목적
+        앱은 서비스 기능 구현을 위해 Supabase DB에 연동된 다음의 최소 정보만을 수집하고 이용합니다.
+        
+        - 카카오 로그인 및 회원 관리 (동의 없이 처리): 카카오 고유회원번호(kakao_id), 닉네임(nickname), 가입일자
+          (근거: 「개인정보 보호법」 제15조 제1항 제4호 계약의 체결 및 이행)
+          
+        - MBTI 커뮤니티 서비스 (동의 후 처리): MBTI 성향 결과(mbti), 문항별 선택 내역(UserSelect), 커뮤니티 작성 글·댓글, 투표 참여 내역(VoteUser)
+          (근거: 「개인정보 보호법」 제15조 제1항 제1호 정보주체의 동의)
+        
+        2. 개인정보의 보유 및 파기 규칙
+        - 보유 기간: 수집된 모든 사용자 데이터는 회원 탈퇴 시까지 보관됩니다.
+        - 파기 방법: 사용자가 앱 내에서 회원 탈퇴를 요청하거나 프로젝트가 종료되는 경우, Supabase DB에서 관련 참조 데이터를 포함하여 즉시 영구 삭제(Cascade Delete) 처리합니다.
+        
+        3. 제3자 제공 및 위탁에 관한 사항
+        본 앱은 학술 및 개발 실습 목적으로 운영되므로, 사용자의 개인정보를 외부 제3자에게 절대 제공하거나 마케팅 목적으로 위탁하지 않습니다.
+        
+        4. 이용자의 권리 행사 방법
+        사용자는 언제든지 앱 내 탈퇴 기능이나 마이페이지(프로필 화면)를 통해 본인의 데이터를 직접 조회, 수정, 삭제할 수 있습니다.
+        
+        5. 개인정보 보호책임자 (문의처)
+        프로젝트 관리자에게 개인정보 관련 고충 사항을 문의하실 수 있습니다.
+        
+        - 담당자 (개발팀): <본인 이름 또는 팀명 입력>
+        - 연락처 (이메일): <학교 이메일 또는 개발용 이메일 입력>
+    """.trimIndent()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "개인정보 처리방침",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        },
+        text = {
+            Text(
+                text = privacyPolicyText,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                modifier = Modifier.verticalScroll(scrollState)
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("확인", fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+
+@Composable
+fun NotificationDialog(onDismiss: () -> Unit) {
+    var isCommentAlarmOn by remember { mutableStateOf(true) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "알림 설정",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        },
+        text = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "새 댓글 알림 받기", fontSize = 16.sp)
+                Switch(
+                    checked = isCommentAlarmOn,
+                    onCheckedChange = { isCommentAlarmOn = it },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF9B12F0))
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("닫기", fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+
+@Composable
+fun MbtiChangeDialog(
+    currentMbti: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    val mbtis = listOf(
+        "ISTJ" to "전략가", "ISFJ" to "수호자", "INFJ" to "옹호자", "INTJ" to "전략가",
+        "ISTP" to "장인", "ISFP" to "예술가", "INFP" to "중재자", "INTP" to "분석가",
+        "ESTP" to "활동가", "ESFP" to "연예인", "ENFP" to "활동가", "ENTP" to "변론가",
+        "ESTJ" to "경영자", "ESFJ" to "외교관", "ENFJ" to "선도자", "ENTJ" to "지도자"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "MBTI 변경", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                for (i in mbtis.indices step 4) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        for (j in 0 until 4) {
+                            if (i + j < mbtis.size) {
+                                val (mbtiName, nickname) = mbtis[i + j]
+
+                                Card(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { onSelect(mbtiName) },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (mbtiName == currentMbti) Color(0xFF9B12F0) else Color(0xFFF3F4F6)
+                                    ),
+                                    elevation = CardDefaults.cardElevation(0.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 10.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = mbtiName,
+                                            color = if (mbtiName == currentMbti) Color.White else Color(0xFF374151),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = nickname,
+                                            color = if (mbtiName == currentMbti) Color(0xFFE5E7EB) else Color(0xFF6B7280),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소", fontWeight = FontWeight.Bold)
+            }
+        }
+    )
 }
