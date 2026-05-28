@@ -385,7 +385,8 @@ fun HomeScreen(
 
             SupabaseHelper.fetchBoards(targetCat?.id) { fetchedBoards ->
                 dbPosts = when (selectedFilter) {
-                    "전체", "인기" -> fetchedBoards.filter { (it.BoardLike?.size ?: 0) >= 10 }
+                    "전체" -> fetchedBoards 
+                    "인기" -> fetchedBoards.filter { (it.BoardLike?.size ?: 0) >= 10 }
                     "내가 쓴 글" -> fetchedBoards.filter { it.author_id == myKakaoId }
                     "내가 쓴 댓글" -> fetchedBoards.filter { board ->
                         board.Comment?.any { comment -> comment.author_id == myKakaoId } == true
